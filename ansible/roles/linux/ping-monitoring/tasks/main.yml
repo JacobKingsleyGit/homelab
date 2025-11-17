@@ -1,0 +1,19 @@
+---
+- name: Ensure ping monitoring script directory exists
+  file:
+    path: /usr/local/bin/ping-monitoring
+    state: directory
+    mode: '0755'
+
+- name: Deploy ping monitoring script
+  copy:
+    src: ping-monitor.sh
+    dest: /usr/local/bin/ping-monitoring/ping-monitor.sh
+    mode: '0755'
+
+- name: Install cron job for ping monitoring
+  cron:
+    name: "Ping monitoring"
+    user: root
+    job: "/usr/local/bin/ping-monitoring/ping-monitor.sh"
+    minute: "*/1"

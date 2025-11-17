@@ -1,7 +1,7 @@
 #!/bin/bash
 # Mutual uptime check -> ntfy alert
 # Usage: ./ping-monitor.sh <peer_hostname> <ntfy_topic>
-# Example: ./ping-monitor.sh macmini.local homelab-alerts
+# Example: ./ping-monitor.sh pc.local alerts123
 
 PEER="$1"
 NTFY_TOPIC="$2"
