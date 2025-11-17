@@ -1,0 +1,25 @@
+---
+- name: Ensure script directory exists
+  file:
+    path: /usr/local/bin/ping-monitoring
+    state: directory
+    mode: '0755'
+
+- name: Deploy ping monitoring script
+  copy:
+    src: ping-monitor.sh
+    dest: /usr/local/bin/ping-monitoring/ping-monitor.sh
+    mode: '0755'
+
+- name: Deploy launchd plist
+  template:
+    src: ping.monitor.plist.j2
+    dest: /Library/LaunchDaemons/com.ping.monitor.plist
+    owner: root
+    group: wheel
+    mode: '0644'
+
+- name: Load launchd service
+  command: launchctl load -w /Library/LaunchDaemons/com.ping.monitor.plist
+  args:
+    creates: /var/db/launchd.db/com.apple.launchd/overrides.plists
