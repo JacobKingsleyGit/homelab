@@ -1,0 +1,9 @@
+patches:
+  - target:
+      kind: Namespace
+    patch: |-
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        labels:
+          environment: k3d
