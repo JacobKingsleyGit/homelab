@@ -1,0 +1,18 @@
+# Headlamp Helm values for k3d on macOS (LAN-accessible)
+config:
+  inCluster: true
+  baseURL: "/headlamp"
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Expose via Traefik ingress using mDNS hostname.
+ingress:
+  enabled: true
+  ingressClassName: "traefik"
+  hosts:
+    - host: "jacobs-mac-mini.local"
+      paths:
+        - path: /headlamp
+          type: Prefix
