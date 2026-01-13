@@ -1,0 +1,90 @@
+---
+- name: Ensure LaunchAgents directory exists
+  ansible.builtin.file:
+    path: "{{ k3d_launchagent_dir }}"
+    state: directory
+    mode: "0755"
+
+# ---- k3d config file ----
+- name: Ensure k3d config directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ k3d_config_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Install k3d config
+  become: true
+  ansible.builtin.template:
+    src: "k3d.yaml.j2"
+    dest: "{{ k3d_config_path }}"
+    mode: "0644"
+
+# ---- Docker network: create only if missing ----
+- name: Check if docker network exists
+  ansible.builtin.command: "docker network inspect {{ k3d_docker_network }}"
+  environment:
+    PATH: "{{ k3d_path_env }}"
+    DOCKER_HOST: "{{ k3d_docker_host }}"
+  register: _net_inspect
+  changed_when: false
+  failed_when: false
+
+- name: Create docker network if missing
+  ansible.builtin.command: "docker network create --subnet {{ k3d_docker_subnet }} {{ k3d_docker_network }}"
+  environment:
+    PATH: "{{ k3d_path_env }}"
+    DOCKER_HOST: "{{ k3d_docker_host }}"
+  when: _net_inspect.rc != 0
+  register: _net_create
+  changed_when: _net_create.rc == 0
+
+# ---- k3d cluster: recreate only when force_recreate=true ----
+# Note: config changes require force_recreate=true to take effect.
+- name: Check if k3d cluster exists
+  ansible.builtin.shell: "k3d cluster list -o json | /usr/bin/python3 -c 'import json,sys; name=\"{{ k3d_cluster_name }}\"; data=json.load(sys.stdin); sys.exit(0 if any(c.get(\"name\")==name for c in data) else 1)'"
+  environment:
+    PATH: "{{ k3d_path_env }}"
+    DOCKER_HOST: "{{ k3d_docker_host }}"
+  register: _k3d_cluster_exists
+  changed_when: false
+  failed_when: false
+
+- name: Delete k3d cluster if it exists
+  ansible.builtin.command: "k3d cluster delete {{ k3d_cluster_name }}"
+  environment:
+    PATH: "{{ k3d_path_env }}"
+    DOCKER_HOST: "{{ k3d_docker_host }}"
+  when: _k3d_cluster_exists.rc == 0 and force_recreate | bool
+  register: _k3d_cluster_delete
+  changed_when: _k3d_cluster_delete.rc == 0
+
+- name: Create k3d cluster from config
+  ansible.builtin.command: "k3d cluster create --config {{ k3d_config_path }}"
+  environment:
+    PATH: "{{ k3d_path_env }}"
+    DOCKER_HOST: "{{ k3d_docker_host }}"
+  when: _k3d_cluster_exists.rc != 0 or _k3d_cluster_delete is changed
+  register: _k3d_cluster_create
+  changed_when: _k3d_cluster_create.rc == 0
+
+# ---- Plist: add only if missing ----
+- name: Check if k3d LaunchAgent plist exists
+  ansible.builtin.stat:
+    path: "{{ k3d_plist_path }}"
+  register: _plist
+
+- name: Install k3d LaunchAgent plist if missing
+  ansible.builtin.template:
+    src: "k3d.plist.j2"
+    dest: "{{ k3d_plist_path }}"
+    mode: "0644"
+  when: not _plist.stat.exists
+  register: _plist_install
+
+# Optional but practical: load only when we just created it
+- name: Load LaunchAgent (only when plist newly installed)
+  ansible.builtin.command: "launchctl bootstrap gui/{{ ansible_facts.user_uid }} {{ k3d_plist_path }}"
+  when: _plist_install is changed
+  register: _launchctl_bootstrap
+  changed_when: _launchctl_bootstrap.rc == 0
