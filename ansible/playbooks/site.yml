@@ -1,0 +1,7 @@
+---
+- name: Configure local macOS k3d
+  hosts: macmini
+  vars_files:
+    - ../vars/local.yml
+  roles:
+    - role: macos/k3d

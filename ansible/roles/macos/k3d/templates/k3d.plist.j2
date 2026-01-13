@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>{{ k3d_launchagent_label }}</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <false/>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key>
+      <string>{{ k3d_path_env }}</string>
+{% if k3d_docker_host %}
+      <key>DOCKER_HOST</key>
+      <string>{{ k3d_docker_host }}</string>
+{% endif %}
+    </dict>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/sh</string>
+      <string>-c</string>
+      <string>k3d cluster start {{ k3d_cluster_name }}</string>
+    </array>
+
+    <key>StandardOutPath</key>
+    <string>{{ ansible_facts['env'].get('HOME', '') }}/Library/Logs/k3d-homelab.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{ ansible_facts['env'].get('HOME', '') }}/Library/Logs/k3d-homelab.err.log</string>
+  </dict>
+</plist>
